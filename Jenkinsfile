@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        // Azure credentials defined in environment block
         AZURE_CLIENT_ID = credentials('AZURE_CLIENT_ID')
         AZURE_CLIENT_SECRET = credentials('AZURE_CLIENT_SECRET')
         AZURE_TENANT_ID = credentials('AZURE_TENANT_ID')
@@ -11,7 +10,6 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                // Use GitHub credentials here (not in env block)
                 checkout([$class: 'GitSCM',
                     branches: [[name: '*/main']],
                     userRemoteConfigs: [[
@@ -30,7 +28,7 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                echo 'No tests defined yet.'
+                bat 'npm test'
             }
         }
 
@@ -43,8 +41,10 @@ pipeline {
         stage('Deploy to Azure') {
             steps {
                 bat """
+                    echo === Logging into Azure ===
                     az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%
-                    az functionapp deployment source config-zip -g rg-vamaa -n hello-func-vamaa01 --src function.zip
+                    echo === Deploying Function App ===
+                    az functionapp deployment source config-zip --resource-group rg-vamaa --name hello-func-vamaa01 --src function.zip
                 """
             }
         }
