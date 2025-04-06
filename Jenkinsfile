@@ -2,11 +2,7 @@ pipeline {
     agent any
 
     environment {
-        // Reference your GitHub PAT stored as a Jenkins "Username with Password"
-        GITHUB_USERNAME = credentials('github-pat').username
-        GITHUB_TOKEN = credentials('github-pat').password
-
-        // Azure service principal credentials (stored as secret text separately)
+        // Azure credentials defined in environment block
         AZURE_CLIENT_ID = credentials('AZURE_CLIENT_ID')
         AZURE_CLIENT_SECRET = credentials('AZURE_CLIENT_SECRET')
         AZURE_TENANT_ID = credentials('AZURE_TENANT_ID')
@@ -15,11 +11,14 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git(
-                    url: 'https://github.com/Vamaa-shah/azure-function-jenkins-8953026.git',
-                    branch: 'main',
-                    credentialsId: 'github-pat'
-                )
+                // Use GitHub credentials here (not in env block)
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/Vamaa-shah/azure-function-jenkins-8953026.git',
+                        credentialsId: 'github-pat'
+                    ]]
+                ])
             }
         }
 
@@ -31,11 +30,11 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                echo 'No tests yet — you can add Jest or Mocha later'
+                echo 'No tests defined yet.'
             }
         }
 
-        stage('Zip the Function') {
+        stage('Zip Function App') {
             steps {
                 bat 'powershell Compress-Archive -Path * -DestinationPath function.zip'
             }
@@ -43,10 +42,10 @@ pipeline {
 
         stage('Deploy to Azure') {
             steps {
-                bat '''
+                bat """
                     az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%
-                    az functionapp deployment source config-zip --resource-group rg-vamaa --name hello-func-vamaa01 --src function.zip
-                '''
+                    az functionapp deployment source config-zip -g rg-vamaa -n hello-func-vamaa01 --src function.zip
+                """
             }
         }
     }
