@@ -34,7 +34,7 @@ pipeline {
 
         stage('Zip Function App') {
             steps {
-                bat 'powershell Compress-Archive -Path * -DestinationPath function.zip'
+                bat 'powershell Compress-Archive -Path * -DestinationPath function.zip -Force'
             }
         }
 
@@ -43,6 +43,7 @@ pipeline {
                 bat """
                     echo === Logging into Azure ===
                     az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%
+                    
                     echo === Deploying Function App ===
                     az functionapp deployment source config-zip --resource-group rg-vamaa --name hello-func-vamaa01 --src function.zip
                 """
