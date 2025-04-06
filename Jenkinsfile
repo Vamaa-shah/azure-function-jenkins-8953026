@@ -2,14 +2,24 @@ pipeline {
     agent any
 
     environment {
-        AZURE_CREDENTIALS = credentials('azure-service-principal')
-        GITHUB_CREDENTIALS = credentials('github-pat')
+        // Reference your GitHub PAT stored as a Jenkins "Username with Password"
+        GITHUB_USERNAME = credentials('github-pat').username
+        GITHUB_TOKEN = credentials('github-pat').password
+
+        // Azure service principal credentials (stored as secret text separately)
+        AZURE_CLIENT_ID = credentials('AZURE_CLIENT_ID')
+        AZURE_CLIENT_SECRET = credentials('AZURE_CLIENT_SECRET')
+        AZURE_TENANT_ID = credentials('AZURE_TENANT_ID')
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git credentialsId: "${GITHUB_CREDENTIALS}", url: 'https://github.com/Vamaa-shah/azure-function-jenkins-8953026.git', branch: 'main'
+                git(
+                    url: 'https://github.com/Vamaa-shah/azure-function-jenkins-8953026.git',
+                    branch: 'main',
+                    credentialsId: 'github-pat'
+                )
             }
         }
 
@@ -21,18 +31,22 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                echo 'No tests defined yet'
+                echo 'No tests yet — you can add Jest or Mocha later'
+            }
+        }
+
+        stage('Zip the Function') {
+            steps {
+                bat 'powershell Compress-Archive -Path * -DestinationPath function.zip'
             }
         }
 
         stage('Deploy to Azure') {
             steps {
-                withCredentials([azureServicePrincipal('azure-service-principal')]) {
-                    bat '''
-                        az login --service-principal -u %AZURE_CREDENTIALS_USR% -p %AZURE_CREDENTIALS_PSW% --tenant 97351641-0732-493e-9b3f-25564a91ca6a
-                        az functionapp deployment source config-zip -g rg-vamaa -n hello-func-vamaa01 --src function.zip
-                    '''
-                }
+                bat '''
+                    az login --service-principal -u %AZURE_CLIENT_ID% -p %AZURE_CLIENT_SECRET% --tenant %AZURE_TENANT_ID%
+                    az functionapp deployment source config-zip --resource-group rg-vamaa --name hello-func-vamaa01 --src function.zip
+                '''
             }
         }
     }
